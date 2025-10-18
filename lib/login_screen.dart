@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'item_listings_screen.dart'; // <-- add this import
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -11,7 +12,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool isLogin = true; // toggle between login & signup
+  bool isLogin = true;
   String errorMessage = '';
 
   void toggleForm() {
@@ -33,10 +34,21 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     try {
+      UserCredential userCredential;
       if (isLogin) {
-        await _auth.signInWithEmailAndPassword(email: email, password: password);
+        userCredential = await _auth.signInWithEmailAndPassword(
+            email: email, password: password);
       } else {
-        await _auth.createUserWithEmailAndPassword(email: email, password: password);
+        userCredential = await _auth.createUserWithEmailAndPassword(
+            email: email, password: password);
+      }
+
+      if (userCredential.user != null) {
+        // ✅ Go to ItemsScreen on successful login/signup
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const ItemsScreen()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -52,21 +64,21 @@ class _LoginScreenState extends State<LoginScreen> {
         title: Text(isLogin ? 'Login' : 'Sign Up'),
       ),
       body: Padding(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(labelText: 'Email'),
+              decoration: const InputDecoration(labelText: 'Email'),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             TextField(
               controller: _passwordController,
-              decoration: InputDecoration(labelText: 'Password'),
+              decoration: const InputDecoration(labelText: 'Password'),
               obscureText: true,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: submit,
               child: Text(isLogin ? 'Login' : 'Sign Up'),
@@ -74,15 +86,17 @@ class _LoginScreenState extends State<LoginScreen> {
             TextButton(
               onPressed: toggleForm,
               child: Text(
-                isLogin ? "Don't have an account? Sign Up" : "Already have an account? Login",
+                isLogin
+                    ? "Don't have an account? Sign Up"
+                    : "Already have an account? Login",
               ),
             ),
             if (errorMessage.isNotEmpty)
               Padding(
-                padding: EdgeInsets.only(top: 20),
+                padding: const EdgeInsets.only(top: 20),
                 child: Text(
                   errorMessage,
-                  style: TextStyle(color: Colors.red),
+                  style: const TextStyle(color: Colors.red),
                 ),
               ),
           ],
