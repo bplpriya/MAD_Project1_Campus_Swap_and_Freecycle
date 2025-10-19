@@ -1,11 +1,12 @@
-// lib/screens/item_listings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'add_item_screen.dart';
-// REMOVED: import 'item_details_screen.dart'; 
+import 'item_details_screen.dart';
+import 'profile_screen.dart';
 import '../models/item_model.dart';
 
-class ItemListingsScreen extends StatelessWidget { 
+class ItemListingsScreen extends StatelessWidget {
   const ItemListingsScreen({super.key});
 
   @override
@@ -13,11 +14,22 @@ class ItemListingsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Available Items'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('items')
-            .orderBy('createdAt', descending: true) 
+            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -30,34 +42,54 @@ class ItemListingsScreen extends StatelessWidget {
             return const Center(child: Text('No items listed yet!'));
           }
 
-          final items = snapshot.data!.docs
-              .map((doc) => Item.fromMap(doc))
-              .toList();
+          final items = snapshot.data!.docs.map((doc) {
+            final item = Item.fromMap(doc);
+            final sellerId = (doc.data() as Map<String, dynamic>)['sellerId'] ?? '';
+            return {'item': item, 'sellerId': sellerId};
+          }).toList();
 
           return ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
-              final item = items[index];
+              final item = items[index]['item'] as Item;
+              final sellerId = items[index]['sellerId'] as String;
+
               return ListTile(
                 leading: item.imageUrl != null
-                    ? Image.network( 
+                    ? Image.network(
                         item.imageUrl!,
                         width: 50,
                         height: 50,
                         fit: BoxFit.cover,
                         loadingBuilder: (context, child, loadingProgress) {
                           if (loadingProgress == null) return child;
-                          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                          return const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2));
                         },
                       )
                     : const Icon(Icons.inventory, size: 40),
                 title: Text(item.name),
-                subtitle: Text('Cost: ${item.tokenCost} Tokens'), 
-                // REMOVED: The trailing icon is now redundant since we don't navigate
-                // trailing: const Icon(Icons.arrow_forward_ios), 
-                // REMOVED: onTap navigation logic
-                onTap: () {
-                   // This tap does nothing now, but keeps the list item tappable if needed later
+                subtitle: Text('Cost: ${item.tokenCost} Tokens'),
+                onTap: () async {
+                  String sellerName = 'Unknown';
+                  if (sellerId.isNotEmpty) {
+                    final sellerDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(sellerId)
+                        .get();
+                    sellerName = sellerDoc.data()?['name'] ?? 'Unknown';
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => ItemDetailsScreen(
+                        item: item,
+                        sellerName: sellerName,
+                        sellerId: sellerId,
+                      ),
+                    ),
+                  );
                 },
               );
             },

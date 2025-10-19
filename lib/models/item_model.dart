@@ -1,23 +1,20 @@
-// lib/models/item_model.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Item {
   final String id;
   final String name;
   final String description;
-  final int tokenCost;      // Field is correct
-  final String? imageUrl; 
+  final int tokenCost; // Correct field
+  final String? imageUrl;
 
   Item({
     this.id = '',
     required this.name,
     required this.description,
-    required this.tokenCost,    // ⭐️ FIX: The constructor now requires tokenCost
+    required this.tokenCost,
     this.imageUrl,
   });
 
-  // Method to serialize the object to a Map for Firestore upload
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -28,10 +25,8 @@ class Item {
     };
   }
 
-  // Factory constructor to create an object from a Firestore DocumentSnapshot
   factory Item.fromMap(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
-    
     if (data == null) {
       throw Exception("Document data is null");
     }
