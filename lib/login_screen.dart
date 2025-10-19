@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'item_listings_screen.dart'; // <-- add this import
+import 'item_listings_screen.dart'; // ✅ renamed import
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -44,10 +44,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (userCredential.user != null) {
-        // ✅ Go to ItemsScreen on successful login/signup
+        // ✅ Go to ItemListingsScreen on successful login/signup
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ItemsScreen()),
+          MaterialPageRoute(builder: (context) => const ItemListingsScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
