@@ -1,14 +1,15 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'login_screen.dart';
-import 'package:flutter/foundation.dart'; // for kIsWeb
+import 'package:flutter/foundation.dart';
+import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (kIsWeb) {
     await Firebase.initializeApp(
-      options: FirebaseOptions(
+      options: const FirebaseOptions(
         apiKey: "AIzaSyBBV7HGyAR87WnslHd4y3wVMtZYzfqoXW0",
         authDomain: "maddemo-621ab.firebaseapp.com",
         projectId: "maddemo-621ab",
@@ -19,13 +20,18 @@ void main() async {
       ),
     );
   } else {
+    // Note: For non-web platforms (Android/iOS/Desktop), 
+    // ensure you have run 'flutterfire configure' and your
+    // firebase_options.dart is correctly set up.
     await Firebase.initializeApp();
   }
 
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
