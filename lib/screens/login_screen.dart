@@ -1,7 +1,6 @@
-// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'item_listings_screen.dart'; // UPDATED PATH (relative)
+import 'item_listings_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override

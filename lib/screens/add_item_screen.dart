@@ -1,14 +1,12 @@
-// lib/screens/add_item_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/item_model.dart'; // UPDATED PATH
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/item_model.dart';
 
 class AddItemScreen extends StatefulWidget {
-  // Callback function to send the new Item back to the listing screen
-  final Function(Item) onSave; 
-  
-  const AddItemScreen({super.key, required this.onSave});
+  const AddItemScreen({super.key});
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -20,11 +18,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _descController = TextEditingController();
   final _priceController = TextEditingController();
   File? _image;
+  bool _isLoading = false;
 
   Future<void> _pickImage() async {
-    // Note: For production-grade cross-platform apps (especially web),
-    // you would need different logic, as dart:io.File is not supported
-    // on all platforms.
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
@@ -33,26 +29,54 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  void _saveItem() {
-    if (_formKey.currentState!.validate()) {
-      final name = _nameController.text;
-      final description = _descController.text;
+  void _saveItem() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      String? imageUrl;
+      // 1. Upload image to Firebase Storage if selected
+      if (_image != null) {
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}-${_nameController.text}.jpg';
+        final storageRef = FirebaseStorage.instance.ref().child('item_images').child(fileName);
+        
+        // Put the file to storage
+        await storageRef.putFile(_image!);
+        
+        // Get the downloadable URL
+        imageUrl = await storageRef.getDownloadURL();
+      }
+
       final price = double.tryParse(_priceController.text) ?? 0.0; 
 
+      // 2. Create Item object and save to Firestore
       final newItem = Item(
-        name: name,
-        description: description,
+        name: _nameController.text,
+        description: _descController.text,
         price: price,
-        image: _image,
+        imageUrl: imageUrl, // Save the URL
       );
 
-      // Call the callback to pass the new item back to the ItemListingsScreen
-      widget.onSave(newItem);
+      // 3. Add to Firestore collection. This change is seen by all users immediately.
+      await FirebaseFirestore.instance.collection('items').add(newItem.toMap());
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${newItem.name} added successfully!')),
       );
       Navigator.pop(context); // Go back to item list
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save item: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false; // Stop loading
+      });
     }
   }
 
@@ -77,6 +101,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ... (TextFormFields are the same)
               TextFormField(
                 controller: _nameController,
                 decoration: const InputDecoration(labelText: 'Item Name'),
@@ -125,8 +150,14 @@ class _AddItemScreenState extends State<AddItemScreen> {
               const SizedBox(height: 30),
               Center(
                 child: ElevatedButton(
-                  onPressed: _saveItem,
-                  child: const Text('Save Item'),
+                  onPressed: _isLoading ? null : _saveItem,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('Save Item'),
                 ),
               ),
             ],

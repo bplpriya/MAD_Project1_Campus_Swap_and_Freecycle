@@ -1,36 +1,10 @@
-// lib/screens/item_listings_screen.dart
 import 'package:flutter/material.dart';
-import 'add_item_screen.dart'; // UPDATED PATH (relative)
-import '../models/item_model.dart'; // UPDATED PATH (step up to lib, then down to models)
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'add_item_screen.dart';
+import '../models/item_model.dart';
 
-class ItemListingsScreen extends StatefulWidget {
+class ItemListingsScreen extends StatelessWidget { 
   const ItemListingsScreen({super.key});
-
-  @override
-  State<ItemListingsScreen> createState() => _ItemListingsScreenState();
-}
-
-class _ItemListingsScreenState extends State<ItemListingsScreen> {
-  // In-memory list to hold items
-  final List<Item> _items = [
-    Item(
-      name: 'Item 1',
-      description: 'First hardcoded item.',
-      price: 10.0,
-    ),
-    Item(
-      name: 'Item 2',
-      description: 'Second hardcoded item.',
-      price: 25.50,
-    ),
-  ];
-
-  // Function to add a new item and trigger a UI refresh
-  void _addItem(Item newItem) {
-    setState(() {
-      _items.add(newItem);
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,40 +12,58 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
       appBar: AppBar(
         title: const Text('Available Items'),
       ),
-      body: _items.isEmpty
-          ? const Center(child: Text('No items listed yet!'))
-          : ListView.builder(
-              itemCount: _items.length,
-              itemBuilder: (context, index) {
-                final item = _items[index];
-                return ListTile(
-                  leading: item.image != null
-                      // Only display Image.file if image is selected and file exists
-                      ? Image.file(
-                          item.image!,
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(Icons.inventory, size: 40),
-                  title: Text(item.name),
-                  subtitle: Text(
-                      'Price: \$${item.price.toStringAsFixed(2)}\n${item.description}'),
-                  isThreeLine: true,
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // Optional: Navigate to a detail screen
-                  },
-                );
-              },
-            ),
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('items')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No items listed yet!'));
+          }
+
+          // Map Firestore documents to a list of Item objects
+          final items = snapshot.data!.docs
+              .map((doc) => Item.fromMap(doc))
+              .toList();
+
+          return ListView.builder(
+            itemCount: items.length,
+            itemBuilder: (context, index) {
+              final item = items[index];
+              return ListTile(
+                leading: item.imageUrl != null
+                    ? Image.network( 
+                        item.imageUrl!,
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                        },
+                      )
+                    : const Icon(Icons.inventory, size: 40),
+                title: Text(item.name),
+                subtitle: Text('\$${item.price.toStringAsFixed(2)}'),
+                trailing: const Icon(Icons.arrow_forward_ios),
+              );
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Pass the _addItem function to AddItemScreen
           Navigator.push(
             context,
-            MaterialPageRoute(
-                builder: (context) => AddItemScreen(onSave: _addItem)),
+            MaterialPageRoute(builder: (context) => const AddItemScreen()),
           );
         },
         child: const Icon(Icons.add),
