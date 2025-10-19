@@ -1,6 +1,7 @@
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'item_listings_screen.dart'; // ✅ renamed import
+import 'item_listings_screen.dart'; // UPDATED PATH (relative)
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -44,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (userCredential.user != null) {
-        // ✅ Go to ItemListingsScreen on successful login/signup
+        // Go to ItemListingsScreen on successful login/signup
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const ItemListingsScreen()),
@@ -55,6 +56,13 @@ class _LoginScreenState extends State<LoginScreen> {
         errorMessage = e.message ?? "An error occurred";
       });
     }
+  }
+  
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
   }
 
   @override

@@ -1,9 +1,14 @@
+// lib/screens/add_item_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/item_model.dart'; // UPDATED PATH
 
 class AddItemScreen extends StatefulWidget {
-  const AddItemScreen({super.key});
+  // Callback function to send the new Item back to the listing screen
+  final Function(Item) onSave; 
+  
+  const AddItemScreen({super.key, required this.onSave});
 
   @override
   State<AddItemScreen> createState() => _AddItemScreenState();
@@ -17,6 +22,9 @@ class _AddItemScreenState extends State<AddItemScreen> {
   File? _image;
 
   Future<void> _pickImage() async {
+    // Note: For production-grade cross-platform apps (especially web),
+    // you would need different logic, as dart:io.File is not supported
+    // on all platforms.
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
       setState(() {
@@ -27,12 +35,33 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   void _saveItem() {
     if (_formKey.currentState!.validate()) {
-      // TODO: Later we’ll save to Firebase/SQLite
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Item added successfully!')),
+      final name = _nameController.text;
+      final description = _descController.text;
+      final price = double.tryParse(_priceController.text) ?? 0.0; 
+
+      final newItem = Item(
+        name: name,
+        description: description,
+        price: price,
+        image: _image,
       );
-      Navigator.pop(context); // go back to item list
+
+      // Call the callback to pass the new item back to the ItemListingsScreen
+      widget.onSave(newItem);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${newItem.name} added successfully!')),
+      );
+      Navigator.pop(context); // Go back to item list
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descController.dispose();
+    _priceController.dispose();
+    super.dispose();
   }
 
   @override
@@ -67,24 +96,30 @@ class _AddItemScreenState extends State<AddItemScreen> {
                 controller: _priceController,
                 decoration: const InputDecoration(labelText: 'Price'),
                 keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value!.isEmpty ? 'Please enter price' : null,
+                validator: (value) {
+                  if (value!.isEmpty) return 'Please enter price';
+                  if (double.tryParse(value) == null) return 'Please enter a valid number';
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
               Center(
-                child: _image == null
-                    ? const Text('No image selected.')
-                    : Image.file(
-                        _image!,
-                        height: 150,
-                      ),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: _pickImage,
-                  icon: const Icon(Icons.image),
-                  label: const Text('Upload Image'),
+                child: Column(
+                  children: [
+                    _image == null
+                        ? const Text('No image selected.')
+                        : Image.file(
+                            _image!,
+                            height: 150,
+                            fit: BoxFit.cover,
+                          ),
+                    const SizedBox(height: 10),
+                    ElevatedButton.icon(
+                      onPressed: _pickImage,
+                      icon: const Icon(Icons.image),
+                      label: const Text('Upload Image'),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 30),
