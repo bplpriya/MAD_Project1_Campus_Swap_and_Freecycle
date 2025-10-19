@@ -1,6 +1,8 @@
+// lib/screens/item_listings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_item_screen.dart';
+// REMOVED: import 'item_details_screen.dart'; 
 import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatelessWidget { 
@@ -12,11 +14,10 @@ class ItemListingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Available Items'),
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('items')
-            .orderBy('createdAt', descending: true)
+            .orderBy('createdAt', descending: true) 
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -29,7 +30,6 @@ class ItemListingsScreen extends StatelessWidget {
             return const Center(child: Text('No items listed yet!'));
           }
 
-          // Map Firestore documents to a list of Item objects
           final items = snapshot.data!.docs
               .map((doc) => Item.fromMap(doc))
               .toList();
@@ -52,8 +52,13 @@ class ItemListingsScreen extends StatelessWidget {
                       )
                     : const Icon(Icons.inventory, size: 40),
                 title: Text(item.name),
-                subtitle: Text('\$${item.price.toStringAsFixed(2)}'),
-                trailing: const Icon(Icons.arrow_forward_ios),
+                subtitle: Text('Cost: ${item.tokenCost} Tokens'), 
+                // REMOVED: The trailing icon is now redundant since we don't navigate
+                // trailing: const Icon(Icons.arrow_forward_ios), 
+                // REMOVED: onTap navigation logic
+                onTap: () {
+                   // This tap does nothing now, but keeps the list item tappable if needed later
+                },
               );
             },
           );

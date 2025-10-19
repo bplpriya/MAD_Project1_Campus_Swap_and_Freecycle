@@ -1,17 +1,19 @@
+// lib/models/item_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Item {
   final String id;
   final String name;
   final String description;
-  final double price;
-  final String? imageUrl;
+  final int tokenCost;      // Field is correct
+  final String? imageUrl; 
 
   Item({
     this.id = '',
     required this.name,
     required this.description,
-    required this.price,
+    required this.tokenCost,    // ⭐️ FIX: The constructor now requires tokenCost
     this.imageUrl,
   });
 
@@ -20,7 +22,7 @@ class Item {
     return {
       'name': name,
       'description': description,
-      'price': price,
+      'tokenCost': tokenCost,
       'imageUrl': imageUrl,
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -30,7 +32,6 @@ class Item {
   factory Item.fromMap(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
     
-    // Safety check for null data
     if (data == null) {
       throw Exception("Document data is null");
     }
@@ -39,7 +40,7 @@ class Item {
       id: doc.id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      price: (data['price'] as num?)?.toDouble() ?? 0.0,
+      tokenCost: (data['tokenCost'] as num?)?.toInt() ?? 0,
       imageUrl: data['imageUrl'] as String?,
     );
   }
