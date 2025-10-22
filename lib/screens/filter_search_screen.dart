@@ -14,10 +14,10 @@ class FilterSearchScreen extends StatefulWidget {
 
 class _FilterSearchScreenState extends State<FilterSearchScreen> {
   String _searchQuery = '';
-  int? _minTokenCost; // NEW: Minimum token cost filter
+  int? _minTokenCost;
   int? _maxTokenCost;
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _minCostController = TextEditingController(); // NEW: Controller
+  final TextEditingController _minCostController = TextEditingController();
   final TextEditingController _maxCostController = TextEditingController();
 
   // Method to build the Firestore query (remains simple, as filtering is done locally)
@@ -51,9 +51,21 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
     });
   }
 
+  // NEW: Clear all filters and update the state
+  void _clearFilters() {
+    setState(() {
+      _searchQuery = '';
+      _minTokenCost = null;
+      _maxTokenCost = null;
+      _searchController.clear();
+      _minCostController.clear();
+      _maxCostController.clear();
+    });
+  }
+
   // Check if an item matches the current filters
   bool _itemMatchesFilters(Item item) {
-    // NEW: Filter by min token cost
+    // Filter by min token cost
     if (_minTokenCost != null && item.tokenCost < _minTokenCost!) {
       return false;
     }
@@ -69,6 +81,14 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
     }
 
     return true;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _minCostController.dispose();
+    _maxCostController.dispose();
+    super.dispose();
   }
 
   // --- Widget Builders ---
@@ -92,14 +112,14 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
             children: [
               Expanded(
                 child: TextField(
-                  controller: _minCostController, // NEW: Min Cost Controller
+                  controller: _minCostController,
                   decoration: const InputDecoration(
                     labelText: 'Min Cost',
                     prefixIcon: Icon(Icons.money),
                     border: OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.number,
-                  onChanged: _updateMinCost, // NEW: Update min cost
+                  onChanged: _updateMinCost,
                 ),
               ),
               const SizedBox(width: 10),
@@ -117,7 +137,16 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
               ),
             ],
           ),
-          // REMOVED: The explanatory note has been removed as requested.
+          const SizedBox(height: 10),
+          // NEW: Clear Filters Button
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              icon: const Icon(Icons.clear, size: 18),
+              label: const Text('Clear Filters'),
+              onPressed: _clearFilters,
+            ),
+          ),
         ],
       ),
     );
