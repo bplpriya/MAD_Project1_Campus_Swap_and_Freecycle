@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'add_item_screen.dart';
 import 'item_details_screen.dart';
 import 'profile_screen.dart';
+import 'filter_search_screen.dart'; // Import the filter screen
 import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatelessWidget {
@@ -15,6 +16,16 @@ class ItemListingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Available Items'),
         actions: [
+          // Button to navigate to the Filter/Search screen
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const FilterSearchScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
@@ -55,19 +66,21 @@ class ItemListingsScreen extends StatelessWidget {
               final sellerId = items[index]['sellerId'] as String;
 
               return ListTile(
-                leading: item.imageUrl != null
-                    ? Image.network(
-                        item.imageUrl!,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                              child: CircularProgressIndicator(strokeWidth: 2));
-                        },
-                      )
-                    : const Icon(Icons.inventory, size: 40),
+                leading: SizedBox( // FIX: Wrapped leading image/icon in a SizedBox to prevent layout error
+                  width: 50.0,
+                  height: 50.0,
+                  child: item.imageUrl != null
+                      ? Image.network(
+                          item.imageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return const Center(
+                                child: CircularProgressIndicator(strokeWidth: 2));
+                          },
+                        )
+                      : const Icon(Icons.inventory, size: 40),
+                ),
                 title: Text(item.name),
                 subtitle: Text('Cost: ${item.tokenCost} Tokens'),
                 onTap: () async {
