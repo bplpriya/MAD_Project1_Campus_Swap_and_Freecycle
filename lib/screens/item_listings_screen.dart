@@ -4,7 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'add_item_screen.dart';
 import 'item_details_screen.dart';
 import 'profile_screen.dart';
-import 'filter_search_screen.dart'; // Import the filter screen
+import 'filter_search_screen.dart';
+import 'wishlist_screen.dart'; // NEW: Import the wishlist screen
 import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatelessWidget {
@@ -16,7 +17,17 @@ class ItemListingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Available Items'),
         actions: [
-          // Button to navigate to the Filter/Search screen
+          // NEW: Wishlist Icon
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const WishlistScreen()),
+              );
+            },
+          ),
+          // Search/Filter Icon
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
@@ -55,6 +66,7 @@ class ItemListingsScreen extends StatelessWidget {
 
           final items = snapshot.data!.docs.map((doc) {
             final item = Item.fromMap(doc);
+            // Ensure the item ID is included for the wishlist logic
             final sellerId = (doc.data() as Map<String, dynamic>)['sellerId'] ?? '';
             return {'item': item, 'sellerId': sellerId};
           }).toList();
@@ -66,7 +78,7 @@ class ItemListingsScreen extends StatelessWidget {
               final sellerId = items[index]['sellerId'] as String;
 
               return ListTile(
-                leading: SizedBox( // FIX: Wrapped leading image/icon in a SizedBox to prevent layout error
+                leading: SizedBox(
                   width: 50.0,
                   height: 50.0,
                   child: item.imageUrl != null
