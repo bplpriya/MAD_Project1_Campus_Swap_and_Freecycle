@@ -14,28 +14,27 @@ class FilterSearchScreen extends StatefulWidget {
 
 class _FilterSearchScreenState extends State<FilterSearchScreen> {
   String _searchQuery = '';
+  int? _minTokenCost; // NEW: Minimum token cost filter
   int? _maxTokenCost;
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _minCostController = TextEditingController(); // NEW: Controller
   final TextEditingController _maxCostController = TextEditingController();
 
-  // Method to build the Firestore query based on current filters
+  // Method to build the Firestore query (remains simple, as filtering is done locally)
   Query _buildQuery() {
-    Query query = FirebaseFirestore.instance.collection('items');
-
-    // 1. Order by creation time (default)
-    query = query.orderBy('createdAt', descending: true);
-
-    // 2. Filter by max token cost (if set)
-    // Firestore queries can't easily filter by "less than or equal to" without
-    // a separate index, and are more optimized for range queries. For a simple
-    // filter like this, we'll apply the filter logic in the StreamBuilder.
-    // However, if we wanted to filter by name *starting with* a letter, we'd use
-    // where('name', isGreaterThanOrEqualTo: 'A').where('name', isLessThan: 'B').
-
-    return query;
+    // Fetch all items ordered by creation time.
+    return FirebaseFirestore.instance.collection('items').orderBy('createdAt', descending: true);
   }
 
   // --- Filter/Search logic ---
+
+  // Update min cost filter
+  void _updateMinCost(String value) {
+    final cost = int.tryParse(value.trim());
+    setState(() {
+      _minTokenCost = cost;
+    });
+  }
 
   // Update max cost filter
   void _updateMaxCost(String value) {
@@ -54,6 +53,11 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
 
   // Check if an item matches the current filters
   bool _itemMatchesFilters(Item item) {
+    // NEW: Filter by min token cost
+    if (_minTokenCost != null && item.tokenCost < _minTokenCost!) {
+      return false;
+    }
+
     // Filter by max token cost
     if (_maxTokenCost != null && item.tokenCost > _maxTokenCost!) {
       return false;
@@ -84,21 +88,36 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
             onChanged: _updateSearchQuery,
           ),
           const SizedBox(height: 10),
-          TextField(
-            controller: _maxCostController,
-            decoration: const InputDecoration(
-              labelText: 'Max Token Cost',
-              prefixIcon: Icon(Icons.money),
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            onChanged: _updateMaxCost,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _minCostController, // NEW: Min Cost Controller
+                  decoration: const InputDecoration(
+                    labelText: 'Min Cost',
+                    prefixIcon: Icon(Icons.money),
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: _updateMinCost, // NEW: Update min cost
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _maxCostController,
+                  decoration: const InputDecoration(
+                    labelText: 'Max Cost',
+                    prefixIcon: Icon(Icons.money),
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  onChanged: _updateMaxCost,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
-          const Text(
-            'Note: Filters are applied locally after fetching.',
-            style: TextStyle(color: Colors.grey, fontSize: 12),
-          ),
+          // REMOVED: The explanatory note has been removed as requested.
         ],
       ),
     );
@@ -106,18 +125,20 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
 
   Widget _buildItemTile(BuildContext context, Item item, String sellerId) {
     return ListTile(
-      leading: item.imageUrl != null
-          ? Image.network(
-              item.imageUrl!,
-              width: 50,
-              height: 50,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-              },
-            )
-          : const Icon(Icons.inventory, size: 40),
+      leading: SizedBox(
+        width: 50.0,
+        height: 50.0,
+        child: item.imageUrl != null
+            ? Image.network(
+                item.imageUrl!,
+                fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                },
+              )
+            : const Icon(Icons.inventory, size: 40),
+      ),
       title: Text(item.name),
       subtitle: Text('Cost: ${item.tokenCost} Tokens'),
       onTap: () async {
