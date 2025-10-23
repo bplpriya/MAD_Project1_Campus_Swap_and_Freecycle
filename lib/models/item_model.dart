@@ -1,11 +1,14 @@
+// lib/models/item_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Item {
   final String id;
   final String name;
   final String description;
-  final int tokenCost; // Correct field
+  final int tokenCost;
   final String? imageUrl;
+  final String condition;
+  final String sellerId;
 
   Item({
     this.id = '',
@@ -13,6 +16,8 @@ class Item {
     required this.description,
     required this.tokenCost,
     this.imageUrl,
+    this.condition = 'New',
+    this.sellerId = '',
   });
 
   Map<String, dynamic> toMap() {
@@ -21,6 +26,8 @@ class Item {
       'description': description,
       'tokenCost': tokenCost,
       'imageUrl': imageUrl,
+      'condition': condition,
+      'sellerId': sellerId,
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -37,6 +44,8 @@ class Item {
       description: data['description'] ?? '',
       tokenCost: (data['tokenCost'] as num?)?.toInt() ?? 0,
       imageUrl: data['imageUrl'] as String?,
+      condition: data['condition'] ?? 'New',
+      sellerId: data['sellerId'] ?? '',
     );
   }
 }
