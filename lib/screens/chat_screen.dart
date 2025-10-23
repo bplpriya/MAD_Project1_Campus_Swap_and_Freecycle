@@ -6,10 +6,14 @@ class ChatScreen extends StatefulWidget {
   final String receiverId;
   final String receiverName;
 
-  const ChatScreen({super.key, required this.receiverId, required this.receiverName});
+  ChatScreen({
+    Key? key,
+    required this.receiverId,
+    required this.receiverName,
+  }) : super(key: key);
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  _ChatScreenState createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
@@ -17,41 +21,46 @@ class _ChatScreenState extends State<ChatScreen> {
   final _firestore = FirebaseFirestore.instance;
   final _messageController = TextEditingController();
 
-  late final String chatId;
+  String get _currentUserId => _auth.currentUser!.uid;
 
-  @override
-  void initState() {
-    super.initState();
-    final currentUserId = _auth.currentUser!.uid;
-    // Consistent chatId so both users share same chat
-    chatId = currentUserId.compareTo(widget.receiverId) < 0
-        ? '${currentUserId}_${widget.receiverId}'
-        : '${widget.receiverId}_${currentUserId}';
-  }
+  void _sendMessage() async {
+    final messageText = _messageController.text.trim();
+    if (messageText.isEmpty) return;
 
-  Future<void> _sendMessage() async {
-    final message = _messageController.text.trim();
-    if (message.isEmpty) return;
+    final timestamp = Timestamp.now();
 
-    final currentUserId = _auth.currentUser!.uid;
-    await _firestore
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add({
-      'senderId': currentUserId,
+    // Create a unique chat document ID based on user IDs
+    final chatId = _getChatId(_currentUserId, widget.receiverId);
+
+    await _firestore.collection('chats').doc(chatId).collection('messages').add({
+      'senderId': _currentUserId,
       'receiverId': widget.receiverId,
-      'message': message,
-      'timestamp': FieldValue.serverTimestamp(),
+      'message': messageText,
+      'timestamp': timestamp,
     });
 
     _messageController.clear();
   }
 
+  // Consistent chat ID for any two users
+  String _getChatId(String uid1, String uid2) {
+    return uid1.hashCode <= uid2.hashCode ? '$uid1-$uid2' : '$uid2-$uid1';
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final chatId = _getChatId(_currentUserId, widget.receiverId);
+
     return Scaffold(
-      appBar: AppBar(title: Text('Chat with ${widget.receiverName}')),
+      appBar: AppBar(
+        title: Text(widget.receiverName),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -63,32 +72,34 @@ class _ChatScreenState extends State<ChatScreen> {
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
                 }
-                final docs = snapshot.data!.docs;
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text('No messages yet.'));
+                }
+
+                final messages = snapshot.data!.docs;
+
                 return ListView.builder(
                   reverse: true,
-                  itemCount: docs.length,
+                  itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final data = docs[index].data() as Map<String, dynamic>;
-                    final isMe = data['senderId'] == _auth.currentUser!.uid;
-                    return Align(
-                      alignment: isMe
-                          ? Alignment.centerRight
-                          : Alignment.centerLeft,
+                    final msg = messages[index];
+                    final isMe = msg['senderId'] == _currentUserId;
+
+                    return Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
-                        padding: const EdgeInsets.all(10),
-                        margin: const EdgeInsets.symmetric(
-                            vertical: 5, horizontal: 10),
                         decoration: BoxDecoration(
                           color: isMe ? Colors.blue : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Text(
-                          data['message'] ?? '',
-                          style: TextStyle(
-                              color: isMe ? Colors.white : Colors.black),
+                          msg['message'],
+                          style: TextStyle(color: isMe ? Colors.white : Colors.black),
                         ),
                       ),
                     );
@@ -97,22 +108,24 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: [
                 Expanded(
                   child: TextField(
                     controller: _messageController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       hintText: 'Type a message...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.send),
+                  icon: Icon(Icons.send),
                   onPressed: _sendMessage,
                 ),
               ],

@@ -1,15 +1,23 @@
+// lib/screens/item_listings_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'add_item_screen.dart';
 import 'item_details_screen.dart';
 import 'profile_screen.dart';
 import 'filter_search_screen.dart';
-import 'wishlist_screen.dart'; // NEW: Import the wishlist screen
+import 'wishlist_screen.dart';
 import '../models/item_model.dart';
 
-class ItemListingsScreen extends StatelessWidget {
-  const ItemListingsScreen({super.key});
+class ItemListingsScreen extends StatefulWidget {
+  ItemListingsScreen({Key? key}) : super(key: key);
+
+  @override
+  State<ItemListingsScreen> createState() => _ItemListingsScreenState();
+}
+
+class _ItemListingsScreenState extends State<ItemListingsScreen> {
+  final _firestore = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -17,39 +25,31 @@ class ItemListingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Available Items'),
         actions: [
-          // NEW: Wishlist Icon
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const WishlistScreen()),
-              );
+                  context, MaterialPageRoute(builder: (_) => WishlistScreen()));
             },
           ),
-          // Search/Filter Icon
           IconButton(
             icon: const Icon(Icons.filter_list),
             onPressed: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const FilterSearchScreen()),
-              );
+                  context, MaterialPageRoute(builder: (_) => FilterSearchScreen()));
             },
           ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
               Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ProfileScreen()),
-              );
+                  context, MaterialPageRoute(builder: (_) => ProfileScreen()));
             },
           ),
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
+        stream: _firestore
             .collection('items')
             .orderBy('createdAt', descending: true)
             .snapshots(),
@@ -57,61 +57,61 @@ class ItemListingsScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
+
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
+
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('No items listed yet!'));
           }
 
+          // Map Firestore docs to Item objects safely
           final items = snapshot.data!.docs.map((doc) {
-            final item = Item.fromMap(doc);
-            // Ensure the item ID is included for the wishlist logic
-            final sellerId = (doc.data() as Map<String, dynamic>)['sellerId'] ?? '';
-            return {'item': item, 'sellerId': sellerId};
+            final data = doc.data() as Map<String, dynamic>? ?? {};
+
+            return Item(
+              id: doc.id,
+              name: (data['name'] ?? 'Unknown') as String,
+              description: (data['description'] ?? '') as String,
+              tokenCost: (data['tokenCost'] ?? 0) as int,
+              imageUrl: data['imageUrl'] as String?,
+              condition: (data['condition'] ?? 'New') as String,
+              sellerId: (data['sellerId'] ?? '') as String,
+            );
           }).toList();
 
           return ListView.builder(
             itemCount: items.length,
             itemBuilder: (context, index) {
-              final item = items[index]['item'] as Item;
-              final sellerId = items[index]['sellerId'] as String;
+              final item = items[index];
 
               return ListTile(
                 leading: SizedBox(
-                  width: 50.0,
-                  height: 50.0,
-                  child: item.imageUrl != null
-                      ? Image.network(
-                          item.imageUrl!,
-                          fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
-                            if (loadingProgress == null) return child;
-                            return const Center(
-                                child: CircularProgressIndicator(strokeWidth: 2));
-                          },
-                        )
+                  width: 50,
+                  height: 50,
+                  child: (item.imageUrl != null && item.imageUrl!.isNotEmpty)
+                      ? Image.network(item.imageUrl!, fit: BoxFit.cover)
                       : const Icon(Icons.inventory, size: 40),
                 ),
                 title: Text(item.name),
                 subtitle: Text('Cost: ${item.tokenCost} Tokens'),
                 onTap: () async {
                   String sellerName = 'Unknown';
-                  if (sellerId.isNotEmpty) {
-                    final sellerDoc = await FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(sellerId)
-                        .get();
-                    sellerName = sellerDoc.data()?['name'] ?? 'Unknown';
+
+                  if (item.sellerId.isNotEmpty) {
+                    final sellerDoc =
+                        await _firestore.collection('users').doc(item.sellerId).get();
+                    sellerName = sellerDoc.data()?['name'] as String? ?? 'Unknown';
                   }
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => ItemDetailsScreen(
+                      builder: (_) => ItemDetailsScreen(
                         item: item,
                         sellerName: sellerName,
-                        sellerId: sellerId,
+                        sellerId: item.sellerId,
                       ),
                     ),
                   );
@@ -124,12 +124,9 @@ class ItemListingsScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddItemScreen()),
-          );
+              context, MaterialPageRoute(builder: (_) => AddItemScreen()));
         },
         child: const Icon(Icons.add),
-        tooltip: 'Add Item',
       ),
     );
   }

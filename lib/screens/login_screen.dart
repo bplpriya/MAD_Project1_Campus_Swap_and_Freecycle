@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         userCredential = await _auth.createUserWithEmailAndPassword(
             email: email, password: password);
 
-        // Save user info to Firestore
+        // Save user info to Firestore if not exists
         final user = userCredential.user;
         if (user != null) {
           final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
@@ -69,10 +69,10 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (userCredential.user != null) {
-        // Navigate to ItemListingsScreen
+        // Navigate to ItemListingsScreen (no const)
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const ItemListingsScreen()),
+          MaterialPageRoute(builder: (context) => ItemListingsScreen()),
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -103,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Show Name field only during signup
             if (!isLogin)
               TextField(
                 controller: _nameController,

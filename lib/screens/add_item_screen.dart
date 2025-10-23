@@ -1,5 +1,4 @@
 // lib/screens/add_item_screen.dart
-
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:convert';
@@ -7,10 +6,11 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import '../models/item_model.dart';
 
-// Cloudinary configuration
+// Cloudinary config
 const String CLOUDINARY_CLOUD_NAME = 'dvdfvxphf';
 const String CLOUDINARY_UPLOAD_PRESET = 'flutter_upload';
 final String CLOUDINARY_URL =
@@ -29,11 +29,10 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _descController = TextEditingController();
   final _tokenCostController = TextEditingController();
 
-  File? _imageFile;       // For mobile
-  Uint8List? _webImage;   // For web
+  File? _imageFile;
+  Uint8List? _webImage;
   bool _isLoading = false;
 
-  // Pick image from gallery
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
@@ -46,7 +45,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  // Upload image to Cloudinary (works for both web and mobile)
   Future<String?> _uploadImageToCloudinary() async {
     try {
       final request = http.MultipartRequest('POST', Uri.parse(CLOUDINARY_URL));
@@ -61,12 +59,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           ),
         );
       } else if (!kIsWeb && _imageFile != null) {
-        request.files.add(
-          await http.MultipartFile.fromPath(
-            'file',
-            _imageFile!.path,
-          ),
-        );
+        request.files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
       } else {
         return null;
       }
@@ -87,7 +80,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     }
   }
 
-  // Save item to Firestore
   Future<void> _saveItem() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -95,7 +87,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
     try {
       String? imageUrl = await _uploadImageToCloudinary();
-
       final tokenCost = int.tryParse(_tokenCostController.text) ?? 0;
 
       final newItem = Item(
@@ -103,18 +94,17 @@ class _AddItemScreenState extends State<AddItemScreen> {
         description: _descController.text,
         tokenCost: tokenCost,
         imageUrl: imageUrl,
+        sellerId: FirebaseAuth.instance.currentUser?.uid ?? '',
       );
 
       await FirebaseFirestore.instance.collection('items').add(newItem.toMap());
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${newItem.name} added successfully!')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('${newItem.name} added successfully!')));
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save item: $e')),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Failed to save item: $e')));
     } finally {
       setState(() => _isLoading = false);
     }
