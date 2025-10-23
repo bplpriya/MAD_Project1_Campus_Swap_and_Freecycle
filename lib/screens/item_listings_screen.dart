@@ -7,6 +7,7 @@ import 'item_details_screen.dart';
 import 'profile_screen.dart';
 import 'filter_search_screen.dart';
 import 'wishlist_screen.dart';
+import 'notifications_screen.dart'; // <--- Import NotificationsScreen
 import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatefulWidget {
@@ -25,6 +26,15 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
       appBar: AppBar(
         title: const Text('Available Items'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications), // <-- Notification icon added
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NotificationsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.favorite),
             onPressed: () {
