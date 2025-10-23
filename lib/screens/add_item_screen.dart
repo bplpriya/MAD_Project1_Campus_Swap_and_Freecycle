@@ -97,7 +97,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
         sellerId: FirebaseAuth.instance.currentUser?.uid ?? '',
       );
 
-      await FirebaseFirestore.instance.collection('items').add(newItem.toMap());
+      // Save the item
+      final docRef = await FirebaseFirestore.instance.collection('items').add(newItem.toMap());
+
+      // Add notification AFTER saving item
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'message': 'New item uploaded: ${newItem.name}',
+        'itemId': docRef.id,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
 
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text('${newItem.name} added successfully!')));
