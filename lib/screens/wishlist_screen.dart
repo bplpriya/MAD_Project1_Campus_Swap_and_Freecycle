@@ -76,6 +76,11 @@ class WishlistScreen extends StatelessWidget {
                 description: data['description'] ?? '',
                 tokenCost: (data['tokenCost'] as num?)?.toInt() ?? 0,
                 imageUrl: data['imageUrl'] as String?,
+                // --- ADD NEW REQUIRED FIELDS WITH DEFAULTS ---
+                latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
+                longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
+                location: data['location'] ?? '',
+                // ---------------------------------------------
               );
               final sellerId = data['sellerId'] ?? '';
 

@@ -9,6 +9,9 @@ class Item {
   final String? imageUrl;
   final String condition;
   final String sellerId;
+  final String location; 
+  final double latitude; 
+  final double longitude; 
 
   Item({
     this.id = '',
@@ -18,6 +21,9 @@ class Item {
     this.imageUrl,
     this.condition = 'New',
     this.sellerId = '',
+    this.location = '',
+    this.latitude = 0.0, 
+    this.longitude = 0.0, 
   });
 
   Map<String, dynamic> toMap() {
@@ -28,6 +34,9 @@ class Item {
       'imageUrl': imageUrl,
       'condition': condition,
       'sellerId': sellerId,
+      'location': location,
+      'latitude': latitude, 
+      'longitude': longitude, 
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -46,6 +55,10 @@ class Item {
       imageUrl: data['imageUrl'] as String?,
       condition: data['condition'] ?? 'New',
       sellerId: data['sellerId'] ?? '',
+      location: data['location'] ?? '',
+      // 👇 CRITICAL FIX: Use 'num' type casting to safely handle different numeric formats from Firestore.
+      latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0, 
+      longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0, 
     );
   }
 }

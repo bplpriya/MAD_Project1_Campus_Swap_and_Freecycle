@@ -7,8 +7,8 @@ import 'item_details_screen.dart';
 import 'profile_screen.dart';
 import 'filter_search_screen.dart';
 import 'wishlist_screen.dart';
-import 'notifications_screen.dart'; // <--- Import NotificationsScreen
-import '../models/item_model.dart';
+import 'notifications_screen.dart'; 
+import '../models/item_model.dart'; // Ensure item_model.dart is up to date
 
 class ItemListingsScreen extends StatefulWidget {
   ItemListingsScreen({Key? key}) : super(key: key);
@@ -76,19 +76,9 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
             return const Center(child: Text('No items listed yet!'));
           }
 
-          // Map Firestore docs to Item objects safely
+          // FIX: Use the Item.fromMap factory constructor for robust field retrieval
           final items = snapshot.data!.docs.map((doc) {
-            final data = doc.data() as Map<String, dynamic>? ?? {};
-
-            return Item(
-              id: doc.id,
-              name: (data['name'] ?? 'Unknown') as String,
-              description: (data['description'] ?? '') as String,
-              tokenCost: (data['tokenCost'] ?? 0) as int,
-              imageUrl: data['imageUrl'] as String?,
-              condition: (data['condition'] ?? 'New') as String,
-              sellerId: (data['sellerId'] ?? '') as String,
-            );
+            return Item.fromMap(doc);
           }).toList();
 
           return ListView.builder(
