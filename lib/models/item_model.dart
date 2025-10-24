@@ -11,7 +11,8 @@ class Item {
   final String sellerId;
   final String location; 
   final double latitude; 
-  final double longitude; 
+  final double longitude;
+  final int flagCount; // <--- NEW FIELD
 
   Item({
     this.id = '',
@@ -23,7 +24,8 @@ class Item {
     this.sellerId = '',
     this.location = '',
     this.latitude = 0.0, 
-    this.longitude = 0.0, 
+    this.longitude = 0.0,
+    this.flagCount = 0, // <--- NEW DEFAULT
   });
 
   Map<String, dynamic> toMap() {
@@ -37,6 +39,7 @@ class Item {
       'location': location,
       'latitude': latitude, 
       'longitude': longitude, 
+      'flagCount': flagCount, // <--- ADDED TO MAP
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
@@ -56,9 +59,9 @@ class Item {
       condition: data['condition'] ?? 'New',
       sellerId: data['sellerId'] ?? '',
       location: data['location'] ?? '',
-      // 👇 CRITICAL FIX: Use 'num' type casting to safely handle different numeric formats from Firestore.
       latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0, 
       longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0, 
+      flagCount: (data['flagCount'] as int?) ?? 0, // <--- RETRIEVING FLAG COUNT
     );
   }
 }
