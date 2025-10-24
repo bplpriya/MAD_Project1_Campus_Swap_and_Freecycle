@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart'; 
 import '../models/item_model.dart';
 
 // Cloudinary config
@@ -28,10 +29,15 @@ class _AddItemScreenState extends State<AddItemScreen> {
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
   final _tokenCostController = TextEditingController();
+  final _locationController = TextEditingController(); 
 
   File? _imageFile;
   Uint8List? _webImage;
   bool _isLoading = false;
+  bool _isLocating = false; 
+  
+  double _currentLatitude = 0.0; 
+  double _currentLongitude = 0.0; 
 
   Future<void> _pickImage() async {
     final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -79,8 +85,59 @@ class _AddItemScreenState extends State<AddItemScreen> {
       return null;
     }
   }
+  
+  Future<void> _getCurrentLocation() async {
+    setState(() => _isLocating = true);
+    
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Location services are disabled. Please enable them.';
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'Location permissions are denied.';
+        }
+      }
+      
+      if (permission == LocationPermission.deniedForever) {
+        throw 'Location permissions are permanently denied, we cannot request permissions.';
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      setState(() {
+        _currentLatitude = position.latitude;
+        _currentLongitude = position.longitude;
+        _locationController.text = 'Lat: ${_currentLatitude.toStringAsFixed(4)}, Long: ${_currentLongitude.toStringAsFixed(4)}';
+      });
+
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error getting location: $e')));
+      
+      setState(() {
+        _currentLatitude = 0.0;
+        _currentLongitude = 0.0;
+      });
+
+    } finally {
+      setState(() => _isLocating = false);
+    }
+  }
 
   Future<void> _saveItem() async {
+    if (_currentLatitude == 0.0 && _currentLongitude == 0.0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please tap "Get Location" first to set the item pickup spot.')),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -95,12 +152,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
         tokenCost: tokenCost,
         imageUrl: imageUrl,
         sellerId: FirebaseAuth.instance.currentUser?.uid ?? '',
+        location: _locationController.text,
+        latitude: _currentLatitude, 
+        longitude: _currentLongitude, 
       );
 
-      // Save the item
       final docRef = await FirebaseFirestore.instance.collection('items').add(newItem.toMap());
 
-      // Add notification AFTER saving item
       await FirebaseFirestore.instance.collection('notifications').add({
         'message': 'New item uploaded: ${newItem.name}',
         'itemId': docRef.id,
@@ -123,36 +181,59 @@ class _AddItemScreenState extends State<AddItemScreen> {
     _nameController.dispose();
     _descController.dispose();
     _tokenCostController.dispose();
+    _locationController.dispose(); 
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Define a consistent input decoration style
+    const inputDecoration = InputDecoration(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(10)), // Rounded corners
+        borderSide: BorderSide.none,
+      ),
+      filled: true,
+      fillColor: Color(0xFFF5F5F5), // Light gray background
+      contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+      labelStyle: TextStyle(color: Colors.black54),
+      floatingLabelBehavior: FloatingLabelBehavior.auto,
+    );
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Add New Item')),
+      appBar: AppBar(
+        title: const Text('Add New Item'),
+        // Default AppBar color based on theme
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // --- 1. Item Details Section ---
+              Text('Item Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+              const SizedBox(height: 15),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Item Name'),
+                decoration: inputDecoration.copyWith(labelText: 'Item Name'),
                 validator: (value) => value!.isEmpty ? 'Please enter item name' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               TextFormField(
                 controller: _descController,
-                decoration: const InputDecoration(labelText: 'Description'),
+                decoration: inputDecoration.copyWith(labelText: 'Description'),
                 maxLines: 3,
                 validator: (value) => value!.isEmpty ? 'Please enter description' : null,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
               TextFormField(
                 controller: _tokenCostController,
-                decoration: const InputDecoration(labelText: 'Token Cost'),
+                decoration: inputDecoration.copyWith(
+                  labelText: 'Token Cost',
+                  prefixIcon: const Icon(Icons.money),
+                ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Please enter token cost';
@@ -160,36 +241,111 @@ class _AddItemScreenState extends State<AddItemScreen> {
                   return null;
                 },
               ),
+              
+              const SizedBox(height: 30),
+              const Divider(color: Colors.black12),
               const SizedBox(height: 20),
+
+              // --- 2. Location Section ---
+              Text('Location Tagging', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+              const SizedBox(height: 15),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _locationController,
+                      decoration: inputDecoration.copyWith(
+                        labelText: 'Pick-up Location Name',
+                        prefixIcon: const Icon(Icons.location_on),
+                      ),
+                      validator: (value) => value!.isEmpty ? 'Please enter a location name' : null,
+                      readOnly: _isLocating,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  ElevatedButton(
+                    onPressed: _isLocating ? null : _getCurrentLocation,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 0,
+                      // Default background based on primary color
+                    ),
+                    child: _isLocating
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location), 
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 30),
+              const Divider(color: Colors.black12),
+              const SizedBox(height: 20),
+
+              // --- 3. Image Upload Section ---
+              Text('Item Image', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+              const SizedBox(height: 15),
               Center(
                 child: Column(
                   children: [
-                    _imageFile == null && _webImage == null
-                        ? const Text('No image selected.')
-                        : kIsWeb
-                            ? Image.memory(_webImage!, height: 150, fit: BoxFit.cover)
-                            : Image.file(_imageFile!, height: 150, fit: BoxFit.cover),
-                    const SizedBox(height: 10),
+                    Container(
+                      height: 150,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300, width: 2),
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.grey.shade100, // Light neutral background
+                      ),
+                      child: _imageFile == null && _webImage == null
+                          ? const Center(child: Text('No image selected.', style: TextStyle(color: Colors.grey)))
+                          : ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: kIsWeb
+                                  ? Image.memory(_webImage!, fit: BoxFit.cover)
+                                  : Image.file(_imageFile!, fit: BoxFit.cover),
+                            ),
+                    ),
+                    const SizedBox(height: 15),
                     ElevatedButton.icon(
                       onPressed: _pickImage,
-                      icon: const Icon(Icons.image),
+                      icon: const Icon(Icons.camera_alt),
                       label: const Text('Upload Image'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        // Default background based on primary color
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 30),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _saveItem,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : const Text('Save Item'),
+
+              const SizedBox(height: 40),
+              
+              // --- 4. Save Button (Primary Action) ---
+              ElevatedButton(
+                onPressed: _isLoading || _isLocating ? null : _saveItem,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  backgroundColor: Colors.green.shade600, // Use a clear success color
+                  foregroundColor: Colors.white, 
+                  elevation: 2,
                 ),
+                child: _isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Text(
+                        'Save Item',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
               ),
             ],
           ),

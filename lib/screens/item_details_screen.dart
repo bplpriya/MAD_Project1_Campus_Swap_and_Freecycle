@@ -166,6 +166,23 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             const SizedBox(height: 10),
             Text('Condition: ${widget.item.condition ?? "Not specified"}'),
             const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.location_on, size: 18, color: Colors.grey),
+                const SizedBox(width: 5),
+                Text(
+                  'Location: ${widget.item.location.isNotEmpty ? widget.item.location : "Not specified"}',
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Text(
+              // Display coordinates
+              'Coordinates: Lat ${widget.item.latitude.toStringAsFixed(4)}, Long ${widget.item.longitude.toStringAsFixed(4)}',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
             Text('Description: ${widget.item.description ?? "No description"}'),
             const SizedBox(height: 20),
             Text(
