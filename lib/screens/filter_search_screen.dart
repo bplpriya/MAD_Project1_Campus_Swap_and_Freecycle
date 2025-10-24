@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart'; 
 import '../models/item_model.dart';
 import 'item_details_screen.dart';
 
@@ -16,6 +17,14 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
   String _searchQuery = '';
   int? _minTokenCost;
   int? _maxTokenCost;
+  
+  // --- LOCATION STATE ---
+  bool _isLocating = false;
+  double? _userLatitude;
+  double? _userLongitude;
+  double _filterRadiusMiles = 0.0; // 0.0 means filter is off (NOW IN MILES)
+  // --------------------------
+
   final TextEditingController _searchController = TextEditingController();
   final TextEditingController _minCostController = TextEditingController();
   final TextEditingController _maxCostController = TextEditingController();
@@ -26,9 +35,8 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
     return FirebaseFirestore.instance.collection('items').orderBy('createdAt', descending: true);
   }
 
-  // --- Filter/Search logic ---
+  // --- Filter/Search logic Helpers ---
 
-  // Update min cost filter
   void _updateMinCost(String value) {
     final cost = int.tryParse(value.trim());
     setState(() {
@@ -36,7 +44,6 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
     });
   }
 
-  // Update max cost filter
   void _updateMaxCost(String value) {
     final cost = int.tryParse(value.trim());
     setState(() {
@@ -44,40 +51,100 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
     });
   }
 
-  // Update search query
   void _updateSearchQuery(String query) {
     setState(() {
       _searchQuery = query.toLowerCase().trim();
     });
   }
 
-  // NEW: Clear all filters and update the state
   void _clearFilters() {
     setState(() {
       _searchQuery = '';
       _minTokenCost = null;
       _maxTokenCost = null;
+      _userLatitude = null;
+      _userLongitude = null;
+      _filterRadiusMiles = 0.0;
       _searchController.clear();
       _minCostController.clear();
       _maxCostController.clear();
     });
   }
+  
+  // Location fetching logic (to set the user's current location for filtering)
+  Future<void> _getCurrentLocationForFilter() async {
+    setState(() => _isLocating = true);
+    
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Location services are disabled.';
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'Location permissions are denied.';
+        }
+      }
+      
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      setState(() {
+        _userLatitude = position.latitude;
+        _userLongitude = position.longitude;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Your location is set for filtering.')),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error getting location: $e')));
+      setState(() {
+        _userLatitude = null;
+        _userLongitude = null;
+      });
+    } finally {
+      setState(() => _isLocating = false);
+    }
+  }
+
+  // Utility method to calculate distance in Miles (meters * 0.000621371)
+  double _calculateDistanceMiles(double itemLat, double itemLong) {
+    if (_userLatitude == null || _userLongitude == null) {
+      return double.infinity; // Cannot calculate distance without user location
+    }
+    // Geolocator returns distance in meters
+    final distanceMeters = Geolocator.distanceBetween(
+      _userLatitude!,
+      _userLongitude!,
+      itemLat,
+      itemLong,
+    );
+    // Conversion factor for meters to miles: 1 meter = 0.000621371 miles
+    return distanceMeters * 0.000621371; 
+  }
 
   // Check if an item matches the current filters
   bool _itemMatchesFilters(Item item) {
-    // Filter by min token cost
-    if (_minTokenCost != null && item.tokenCost < _minTokenCost!) {
-      return false;
-    }
-
-    // Filter by max token cost
-    if (_maxTokenCost != null && item.tokenCost > _maxTokenCost!) {
-      return false;
-    }
-
-    // Filter by name (case-insensitive substring match)
-    if (_searchQuery.isNotEmpty && !item.name.toLowerCase().contains(_searchQuery)) {
-      return false;
+    // Filter by cost and name
+    if (_minTokenCost != null && item.tokenCost < _minTokenCost!) return false;
+    if (_maxTokenCost != null && item.tokenCost > _maxTokenCost!) return false;
+    if (_searchQuery.isNotEmpty && !item.name.toLowerCase().contains(_searchQuery)) return false;
+    
+    // NEW: Filter by distance (in Miles)
+    if (_filterRadiusMiles > 0.0 && _userLatitude != null && _userLongitude != null) {
+      // Skip items with default coordinates (0,0) as they can skew distance calculations
+      if (item.latitude == 0.0 && item.longitude == 0.0) return false; 
+      
+      final distance = _calculateDistanceMiles(item.latitude, item.longitude);
+      if (distance > _filterRadiusMiles) {
+        return false;
+      }
     }
 
     return true;
@@ -92,6 +159,48 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
   }
 
   // --- Widget Builders ---
+
+  Widget _buildDistanceFilter() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 10),
+        const Text('Filter by Distance (in miles):', style: TextStyle(fontWeight: FontWeight.bold)),
+        Slider(
+          value: _filterRadiusMiles,
+          min: 0,
+          max: 10, // Max 10 miles filter
+          divisions: 10,
+          label: _filterRadiusMiles == 0.0 ? 'Off' : '${_filterRadiusMiles.toStringAsFixed(1)} miles',
+          onChanged: (double value) {
+            setState(() {
+              _filterRadiusMiles = value;
+            });
+          },
+        ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Radius: ${_filterRadiusMiles == 0.0 ? 'Off' : '${_filterRadiusMiles.toStringAsFixed(1)} miles'}'),
+            ElevatedButton.icon(
+              onPressed: _isLocating ? null : _getCurrentLocationForFilter,
+              icon: _isLocating
+                  ? const SizedBox(
+                      width: 15,
+                      height: 15,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.location_searching, size: 18),
+              label: Text(_userLatitude == null ? 'Set My Location' : 'Location Set'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _userLatitude != null ? Colors.green : Colors.blue,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _buildFilterFields() {
     return Padding(
@@ -137,8 +246,8 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
               ),
             ],
           ),
+          _buildDistanceFilter(), // <--- NEW DISTANCE FILTER
           const SizedBox(height: 10),
-          // NEW: Clear Filters Button
           Align(
             alignment: Alignment.centerRight,
             child: TextButton.icon(
@@ -153,6 +262,12 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
   }
 
   Widget _buildItemTile(BuildContext context, Item item, String sellerId) {
+    double distanceMiles = _calculateDistanceMiles(item.latitude, item.longitude);
+    // Only display distance if user location is set and calculation is valid
+    String distanceText = distanceMiles.isFinite && distanceMiles < double.infinity
+        ? ' - ${distanceMiles.toStringAsFixed(2)} miles away'
+        : '';
+        
     return ListTile(
       leading: SizedBox(
         width: 50.0,
@@ -169,7 +284,7 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
             : const Icon(Icons.inventory, size: 40),
       ),
       title: Text(item.name),
-      subtitle: Text('Cost: ${item.tokenCost} Tokens'),
+      subtitle: Text('Cost: ${item.tokenCost} Tokens${distanceText}'),
       onTap: () async {
         String sellerName = 'Unknown';
         if (sellerId.isNotEmpty) {
