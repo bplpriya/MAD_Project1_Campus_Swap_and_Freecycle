@@ -24,6 +24,57 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _reviewController = TextEditingController();
   double _rating = 0;
   bool _isSubmitting = false;
+  bool _isFlagging = false; // <--- NEW STATE
+
+  // --- NEW: Flagging Logic ---
+  Future<void> _flagItem() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("You must be logged in to flag a listing.")),
+      );
+      return;
+    }
+    
+    setState(() => _isFlagging = true);
+
+    final itemRef = FirebaseFirestore.instance.collection('items').doc(widget.item.id);
+    final flagCollectionRef = itemRef.collection('flags');
+    
+    try {
+      // 1. Check if user already flagged this item
+      final userFlagDoc = await flagCollectionRef.doc(user.uid).get();
+
+      if (userFlagDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("You have already flagged this item.")),
+        );
+        return;
+      }
+      
+      // 2. Add the user's unique flag document
+      await flagCollectionRef.doc(user.uid).set({
+        'userId': user.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      
+      // 3. Atomically increment the flagCount on the main item document
+      await itemRef.update({
+        'flagCount': FieldValue.increment(1),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Listing flagged for review. Thank you.")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to flag item: $e")),
+      );
+    } finally {
+      setState(() => _isFlagging = false);
+    }
+  }
+  // ---------------------------
 
   Future<void> _submitReview() async {
     final user = FirebaseAuth.instance.currentUser;
@@ -139,6 +190,10 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if the current user is the seller
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final isSeller = currentUserId == widget.sellerId;
+
     return Scaffold(
       appBar: AppBar(title: Text(widget.item.name)),
       body: SingleChildScrollView(
@@ -178,7 +233,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             ),
             const SizedBox(height: 5),
             Text(
-              // Display coordinates
               'Coordinates: Lat ${widget.item.latitude.toStringAsFixed(4)}, Long ${widget.item.longitude.toStringAsFixed(4)}',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
@@ -190,23 +244,49 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 30),
-            Center(
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ChatScreen(
-                        receiverId: widget.sellerId,
-                        receiverName: widget.sellerName,
+            
+            // --- Action Buttons Row ---
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatScreen(
+                          receiverId: widget.sellerId,
+                          receiverName: widget.sellerName,
+                        ),
                       ),
+                    );
+                  },
+                  icon: const Icon(Icons.chat),
+                  label: const Text('Chat with Seller'),
+                ),
+                
+                // NEW: Flag Button (Hidden for the seller)
+                if (!isSeller)
+                  ElevatedButton.icon(
+                    onPressed: _isFlagging ? null : _flagItem,
+                    icon: _isFlagging
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : const Icon(Icons.flag, color: Colors.red),
+                    label: const Text('Flag Listing'),
+                    style: ElevatedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      backgroundColor: Colors.red.shade50,
+                      elevation: 0,
                     ),
-                  );
-                },
-                icon: const Icon(Icons.chat),
-                label: const Text('Chat with Seller'),
-              ),
+                  ),
+              ],
             ),
+            // --------------------------
+
             const SizedBox(height: 40),
             const Divider(),
             const Text(

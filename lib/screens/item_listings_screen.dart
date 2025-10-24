@@ -8,7 +8,7 @@ import 'profile_screen.dart';
 import 'filter_search_screen.dart';
 import 'wishlist_screen.dart';
 import 'notifications_screen.dart'; 
-import '../models/item_model.dart'; // Ensure item_model.dart is up to date
+import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatefulWidget {
   ItemListingsScreen({Key? key}) : super(key: key);
@@ -27,7 +27,7 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
         title: const Text('Available Items'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.notifications), // <-- Notification icon added
+            icon: const Icon(Icons.notifications),
             onPressed: () {
               Navigator.push(
                 context,
@@ -76,15 +76,22 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
             return const Center(child: Text('No items listed yet!'));
           }
 
-          // FIX: Use the Item.fromMap factory constructor for robust field retrieval
-          final items = snapshot.data!.docs.map((doc) {
+          // Map Firestore docs to Item objects
+          final allItems = snapshot.data!.docs.map((doc) {
             return Item.fromMap(doc);
           }).toList();
 
+          // FILTER: Hide items that have 10 or more flags
+          final visibleItems = allItems.where((item) => item.flagCount < 10).toList();
+
+          if (visibleItems.isEmpty) {
+             return const Center(child: Text('No items available!'));
+          }
+
           return ListView.builder(
-            itemCount: items.length,
+            itemCount: visibleItems.length,
             itemBuilder: (context, index) {
-              final item = items[index];
+              final item = visibleItems[index];
 
               return ListTile(
                 leading: SizedBox(
