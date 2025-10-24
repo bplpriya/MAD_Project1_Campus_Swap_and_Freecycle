@@ -24,9 +24,9 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _reviewController = TextEditingController();
   double _rating = 0;
   bool _isSubmitting = false;
-  bool _isFlagging = false; // <--- NEW STATE
+  bool _isFlagging = false; 
 
-  // --- NEW: Flagging Logic ---
+  // --- Flagging Logic ---
   Future<void> _flagItem() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -225,17 +225,17 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
               children: [
                 const Icon(Icons.location_on, size: 18, color: Colors.grey),
                 const SizedBox(width: 5),
+                // This line now displays the location name OR coordinates if no name was provided
                 Text(
-                  'Location: ${widget.item.location.isNotEmpty ? widget.item.location : "Not specified"}',
+                  widget.item.location.isNotEmpty 
+                    ? 'Location: ${widget.item.location}'
+                    : 'Location: Lat ${widget.item.latitude.toStringAsFixed(4)}, Long ${widget.item.longitude.toStringAsFixed(4)}',
                   style: const TextStyle(fontSize: 16),
                 ),
               ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              'Coordinates: Lat ${widget.item.latitude.toStringAsFixed(4)}, Long ${widget.item.longitude.toStringAsFixed(4)}',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
+            // REMOVED: Secondary Coordinates Text
+            
             const SizedBox(height: 10),
             Text('Description: ${widget.item.description ?? "No description"}'),
             const SizedBox(height: 20),
@@ -265,7 +265,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                   label: const Text('Chat with Seller'),
                 ),
                 
-                // NEW: Flag Button (Hidden for the seller)
+                // Flag Button (Hidden for the seller)
                 if (!isSeller)
                   ElevatedButton.icon(
                     onPressed: _isFlagging ? null : _flagItem,
@@ -273,7 +273,7 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2),
                           )
                         : const Icon(Icons.flag, color: Colors.red),
                     label: const Text('Flag Listing'),
