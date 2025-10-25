@@ -1,88 +1,70 @@
+// lib/screens/transaction_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class TransactionHistoryScreen extends StatelessWidget {
-  final String currentUserId;
-  final void Function(int)? onTokenChanged;
+class TransactionHistoryScreen extends StatefulWidget {
+  const TransactionHistoryScreen({super.key});
 
-  TransactionHistoryScreen({
-    super.key,
-    required this.currentUserId,
-    this.onTokenChanged,
-  });
+  @override
+  State<TransactionHistoryScreen> createState() => _TransactionHistoryScreenState();
+}
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
+  final _auth = FirebaseAuth.instance;
+  final _firestore = FirebaseFirestore.instance;
+  String currentUserId = '';
 
-  Future<void> _markCompleted(DocumentSnapshot txDoc) async {
-    final txData = txDoc.data() as Map<String, dynamic>;
-    final buyerId = txData['buyerId'];
-    final sellerId = txData['sellerId'];
-    final tokenValue = txData['tokenValue'] ?? 1;
-
-    // Update transaction status
-    await _firestore.collection('transactions').doc(txDoc.id).update({'status': 'Completed'});
-
-    // Update buyer and seller token balances
-    final buyerRef = _firestore.collection('users').doc(buyerId);
-    final sellerRef = _firestore.collection('users').doc(sellerId);
-
-    final buyerDoc = await buyerRef.get();
-    final sellerDoc = await sellerRef.get();
-
-    final buyerTokens = (buyerDoc.data()?['tokenBalance'] ?? 0) - tokenValue;
-    final sellerTokens = (sellerDoc.data()?['tokenBalance'] ?? 0) + tokenValue;
-
-    await buyerRef.update({'tokenBalance': buyerTokens});
-    await sellerRef.update({'tokenBalance': sellerTokens});
-
-    // Update token in Profile if current user is buyer or seller
-    if (onTokenChanged != null) {
-      if (currentUserId == buyerId) onTokenChanged!(buyerTokens);
-      if (currentUserId == sellerId) onTokenChanged!(sellerTokens);
-    }
+  @override
+  void initState() {
+    super.initState();
+    final user = _auth.currentUser;
+    if (user != null) currentUserId = user.uid;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Transaction History')),
+      appBar: AppBar(title: const Text("Transaction History")),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore
-            .collection('transactions')
-            .where('buyerId', isEqualTo: currentUserId)
-            .snapshots(),
+        stream: _firestore.collection('transactions').snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final allTransactions = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['buyerId'] == currentUserId || data['sellerId'] == currentUserId;
+          }).toList();
+
+          if (allTransactions.isEmpty) {
+            return const Center(child: Text("No transactions yet."));
           }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('No transactions yet.'));
-          }
-
-          final transactions = snapshot.data!.docs;
+          allTransactions.sort((a, b) {
+            final aTime = (a['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final bTime = (b['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now();
+            return bTime.compareTo(aTime);
+          });
 
           return ListView.builder(
-            itemCount: transactions.length,
+            itemCount: allTransactions.length,
             itemBuilder: (context, index) {
-              final tx = transactions[index];
-              final txData = tx.data() as Map<String, dynamic>;
-              final status = txData['status'] ?? 'Pending';
-              final itemName = txData['itemName'] ?? 'Item';
-              final tokenValue = txData['tokenValue'] ?? 1;
+              final data = allTransactions[index].data() as Map<String, dynamic>;
+              final type = data['buyerId'] == currentUserId ? 'Bought' : 'Sold';
+              final tokenChange = data['tokenChange'] ?? 0;
+              final status = data['status'] ?? '';
+              final timestamp = (data['timestamp'] as Timestamp?)?.toDate();
+              final timeString = timestamp != null ? timestamp.toLocal().toString().split('.')[0] : '';
 
               return Card(
-                margin: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                margin: const EdgeInsets.all(8),
                 child: ListTile(
-                  leading: Icon(Icons.shopping_bag),
-                  title: Text(itemName),
-                  subtitle: Text("Status: $status\nToken: $tokenValue"),
-                  trailing: status == 'In Progress'
-                      ? ElevatedButton(
-                          onPressed: () => _markCompleted(tx),
-                          child: Text('Mark Completed'),
-                        )
-                      : null,
+                  leading: Icon(
+                    type == 'Bought' ? Icons.shopping_cart : Icons.sell,
+                    color: type == 'Bought' ? Colors.green : Colors.orange,
+                  ),
+                  title: Text('$type - Item ID: ${data['itemId']}'),
+                  subtitle: Text('Tokens: $tokenChange\n$timeString\nStatus: $status'),
                 ),
               );
             },

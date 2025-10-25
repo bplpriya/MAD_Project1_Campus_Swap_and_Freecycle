@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
         '/wishlist': (context) => WishlistScreen(),
         '/notifications': (context) => NotificationsScreen(),
         '/rating_review': (context) => RatingReviewScreen(),
-        // '/transaction_history': (context) => TransactionHistoryScreen(),
+        '/transaction_history': (context) => TransactionHistoryScreen(),
       },
     );
   }

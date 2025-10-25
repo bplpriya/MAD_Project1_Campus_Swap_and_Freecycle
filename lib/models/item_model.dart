@@ -9,10 +9,11 @@ class Item {
   final String? imageUrl;
   final String condition;
   final String sellerId;
-  final String location; 
-  final double latitude; 
+  final String location;
+  final double latitude;
   final double longitude;
-  final int flagCount; // <--- NEW FIELD
+  final int flagCount;
+  final String status; // NEW: Available/Sold
 
   Item({
     this.id = '',
@@ -23,9 +24,10 @@ class Item {
     this.condition = 'New',
     this.sellerId = '',
     this.location = '',
-    this.latitude = 0.0, 
+    this.latitude = 0.0,
     this.longitude = 0.0,
-    this.flagCount = 0, // <--- NEW DEFAULT
+    this.flagCount = 0,
+    this.status = 'Available', // default status
   });
 
   Map<String, dynamic> toMap() {
@@ -37,18 +39,17 @@ class Item {
       'condition': condition,
       'sellerId': sellerId,
       'location': location,
-      'latitude': latitude, 
-      'longitude': longitude, 
-      'flagCount': flagCount, // <--- ADDED TO MAP
+      'latitude': latitude,
+      'longitude': longitude,
+      'flagCount': flagCount,
+      'status': status, // added to map
       'createdAt': FieldValue.serverTimestamp(),
     };
   }
 
   factory Item.fromMap(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>?;
-    if (data == null) {
-      throw Exception("Document data is null");
-    }
+    if (data == null) throw Exception("Document data is null");
 
     return Item(
       id: doc.id,
@@ -59,9 +60,10 @@ class Item {
       condition: data['condition'] ?? 'New',
       sellerId: data['sellerId'] ?? '',
       location: data['location'] ?? '',
-      latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0, 
-      longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0, 
-      flagCount: (data['flagCount'] as int?) ?? 0, // <--- RETRIEVING FLAG COUNT
+      latitude: (data['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (data['longitude'] as num?)?.toDouble() ?? 0.0,
+      flagCount: (data['flagCount'] as int?) ?? 0,
+      status: data['status'] ?? 'Available', // retrieve status
     );
   }
 }
