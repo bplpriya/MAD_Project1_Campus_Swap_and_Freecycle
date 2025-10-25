@@ -18,6 +18,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
+  int _tokenBalance = 0;
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +32,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final doc = await _firestore.collection('users').doc(user.uid).get();
       _nameController.text = doc.data()?['name'] ?? '';
       _emailController.text = user.email ?? '';
+
+      // Load token balance, default 20 if not present
+      setState(() {
+        _tokenBalance = doc.data()?['tokenBalance'] ?? 20;
+      });
+
+      // Initialize Firestore for new users
+      if (!doc.exists) {
+        await _firestore.collection('users').doc(user.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'uid': user.uid,
+          'tokenBalance': _tokenBalance,
+        });
+      }
     }
   }
 
@@ -43,6 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
         'uid': user.uid,
+        'tokenBalance': _tokenBalance,
       }, SetOptions(merge: true));
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -75,7 +93,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: InputDecoration(labelText: 'Email'),
               enabled: false,
             ),
+            SizedBox(height: 20),
+
+            // Display token balance
+            Text(
+              "Token Balance: $_tokenBalance",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             SizedBox(height: 30),
+
             ElevatedButton(
               onPressed: _isLoading ? null : _updateProfile,
               child: _isLoading
@@ -83,12 +109,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   : Text('Update Profile'),
             ),
             SizedBox(height: 20),
+
+            // Transaction history button
             ElevatedButton(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => TransactionHistoryScreen()),
-                );
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TransactionHistoryScreen(
+                        currentUserId: user.uid,
+                        onTokenChanged: (newBalance) {
+                          setState(() => _tokenBalance = newBalance);
+                        },
+                      ),
+                    ),
+                  );
+                }
               },
               child: Text("View Transaction History"),
             ),
