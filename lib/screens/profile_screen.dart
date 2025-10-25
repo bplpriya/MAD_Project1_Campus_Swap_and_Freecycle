@@ -1,3 +1,4 @@
+// lib/screens/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,12 +11,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  bool _isLoading = false;
-
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  int tokens = 0;
+  String name = '';
 
   @override
   void initState() {
@@ -27,59 +26,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = _auth.currentUser;
     if (user != null) {
       final doc = await _firestore.collection('users').doc(user.uid).get();
-      _nameController.text = doc.data()?['name'] ?? '';
-      _emailController.text = user.email ?? '';
-    }
-  }
-
-  Future<void> _updateProfile() async {
-    final user = _auth.currentUser;
-    if (user == null) return;
-
-    setState(() => _isLoading = true);
-    try {
-      await _firestore.collection('users').doc(user.uid).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'uid': user.uid,
-      }, SetOptions(merge: true));
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile: $e')),
-      );
-    } finally {
-      setState(() => _isLoading = false);
+      final data = doc.data();
+      setState(() {
+        tokens = data?['tokens'] ?? 20;
+        name = data?['name'] ?? '';
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = _auth.currentUser;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('My Profile')),
+      appBar: AppBar(title: const Text("Profile")),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Name'),
+            CircleAvatar(
+              radius: 40,
+              child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(fontSize: 30)),
             ),
             const SizedBox(height: 10),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              enabled: false,
-            ),
-            const SizedBox(height: 30),
+            Text('Name: $name', style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 5),
+            Text('Tokens: $tokens', style: const TextStyle(fontSize: 18)),
+            const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _isLoading ? null : _updateProfile,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Update Profile'),
+              onPressed: () {
+                Navigator.pushNamed(context, '/transaction_history');
+              },
+              child: const Text("View Transaction History"),
             ),
           ],
         ),
