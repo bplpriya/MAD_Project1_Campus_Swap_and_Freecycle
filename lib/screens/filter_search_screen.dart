@@ -287,6 +287,8 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
       subtitle: Text('Cost: ${item.tokenCost} Tokens${distanceText}'),
       onTap: () async {
         String sellerName = 'Unknown';
+        String sellerEmail = 'Not available';
+
         if (sellerId.isNotEmpty) {
           final sellerDoc = await FirebaseFirestore.instance
               .collection('users')
@@ -302,6 +304,7 @@ class _FilterSearchScreenState extends State<FilterSearchScreen> {
               item: item,
               sellerName: sellerName,
               sellerId: sellerId,
+              sellerEmail: sellerEmail, 
             ),
           ),
         );

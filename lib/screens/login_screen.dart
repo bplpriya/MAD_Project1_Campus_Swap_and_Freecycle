@@ -45,15 +45,12 @@ class _LoginScreenState extends State<LoginScreen> {
       UserCredential userCredential;
 
       if (isLogin) {
-        // Login existing user
         userCredential =
             await _auth.signInWithEmailAndPassword(email: email, password: password);
       } else {
-        // Signup new user
         userCredential = await _auth.createUserWithEmailAndPassword(
             email: email, password: password);
 
-        // Save user info to Firestore if not exists
         final user = userCredential.user;
         if (user != null) {
           final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
@@ -63,13 +60,13 @@ class _LoginScreenState extends State<LoginScreen> {
               'uid': user.uid,
               'name': name,
               'email': user.email,
+              'tokens': 20, // default tokens
             });
           }
         }
       }
 
       if (userCredential.user != null) {
-        // Navigate to ItemListingsScreen (no const)
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => ItemListingsScreen()),
@@ -95,9 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isLogin ? 'Login' : 'Sign Up'),
-      ),
+      appBar: AppBar(title: Text(isLogin ? 'Login' : 'Sign Up')),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -128,11 +123,9 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             TextButton(
               onPressed: toggleForm,
-              child: Text(
-                isLogin
-                    ? "Don't have an account? Sign Up"
-                    : "Already have an account? Login",
-              ),
+              child: Text(isLogin
+                  ? "Don't have an account? Sign Up"
+                  : "Already have an account? Login"),
             ),
             if (errorMessage.isNotEmpty)
               Padding(

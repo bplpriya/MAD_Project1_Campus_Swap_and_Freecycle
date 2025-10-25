@@ -1,6 +1,8 @@
+// lib/screens/item_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'chat_screen.dart';
 import '../models/item_model.dart';
 
@@ -8,12 +10,14 @@ class ItemDetailsScreen extends StatefulWidget {
   final Item item;
   final String sellerId;
   final String sellerName;
+  final String sellerEmail; // NEW FIELD
 
   const ItemDetailsScreen({
     Key? key,
     required this.item,
     required this.sellerId,
     required this.sellerName,
+    required this.sellerEmail,
   }) : super(key: key);
 
   @override
@@ -160,7 +164,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
       if (soldByMe) {
         await itemRef.update({'status': 'Sold'});
 
-        // Seller transaction
         await transactionRef.set({
           'itemId': widget.item.id,
           'buyerId': '',
@@ -170,7 +173,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
           'timestamp': FieldValue.serverTimestamp(),
         });
 
-        // Update seller token
         final sellerDoc = await _firestore.collection('users').doc(user.uid).get();
         final currentTokens = sellerDoc.data()?['tokens'] ?? 20;
         await _firestore
@@ -178,7 +180,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             .doc(user.uid)
             .update({'tokens': currentTokens + widget.item.tokenCost});
       } else {
-        // Buyer transaction
         final itemData = await itemRef.get();
         final tokenCost = (itemData.data()?['tokenCost'] ?? 0) as int;
 
@@ -213,6 +214,21 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
           .showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       setState(() => _isUpdatingStatus = false);
+    }
+  }
+
+  // --- Open Email ---
+  Future<void> _launchEmail(String email) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: email,
+      query: 'subject=Inquiry about your item',
+    );
+    if (await canLaunchUrl(emailUri)) {
+      await launchUrl(emailUri);
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Cannot open email app")));
     }
   }
 
@@ -254,7 +270,26 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             const SizedBox(height: 10),
             Text('Description: ${widget.item.description}'),
             const SizedBox(height: 20),
-            Text('Sold by: ${widget.sellerName}', style: const TextStyle(fontSize: 16)),
+            // Seller info with tappable email
+            Row(
+              children: [
+                Text('Sold by: ${widget.sellerName}',
+                    style: const TextStyle(fontSize: 16)),
+                const SizedBox(width: 20),
+                GestureDetector(
+                  onTap: () {
+                    if (widget.sellerEmail.isNotEmpty) {
+                      _launchEmail(widget.sellerEmail);
+                    }
+                  },
+                  child: Text('Email: ${widget.sellerEmail}',
+                      style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.blueAccent,
+                          decoration: TextDecoration.underline)),
+                ),
+              ],
+            ),
             const SizedBox(height: 20),
             // Buttons
             Row(
@@ -312,12 +347,11 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             Row(
               children: List.generate(
                 5,
-                (index) =>
-                    IconButton(
-                      icon: Icon(index < _rating ? Icons.star : Icons.star_border,
-                          color: Colors.amber),
-                      onPressed: () => setState(() => _rating = (index + 1).toDouble()),
-                    ),
+                (index) => IconButton(
+                  icon: Icon(index < _rating ? Icons.star : Icons.star_border,
+                      color: Colors.amber),
+                  onPressed: () => setState(() => _rating = (index + 1).toDouble()),
+                ),
               ),
             ),
             TextField(
