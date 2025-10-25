@@ -100,6 +100,8 @@ class WishlistScreen extends StatelessWidget {
                 ),
                 onTap: () async {
                   final sellerName = await _fetchSellerName(sellerId);
+                  String sellerEmail = 'Not available';
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -107,6 +109,7 @@ class WishlistScreen extends StatelessWidget {
                         item: item,
                         sellerName: sellerName,
                         sellerId: sellerId,
+                        sellerEmail: sellerEmail,
                       ),
                     ),
                   );
