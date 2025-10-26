@@ -39,26 +39,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = _auth.currentUser;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile")),
+      appBar: AppBar(title: const Text("My Profile")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center, // Center main elements
           children: [
-            CircleAvatar(
-              radius: 40,
-              child: Text(name.isNotEmpty ? name[0] : '?', style: const TextStyle(fontSize: 30)),
+            // User Avatar
+            Center(
+              child: CircleAvatar(
+                radius: 50,
+                backgroundColor: Theme.of(context).primaryColor,
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?', 
+                  style: const TextStyle(fontSize: 40, color: Colors.white)),
+              ),
             ),
-            const SizedBox(height: 10),
-            Text('Name: $name', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 5),
-            Text('Tokens: $tokens', style: const TextStyle(fontSize: 18)),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/transaction_history');
-              },
-              child: const Text("View Transaction History"),
+            const SizedBox(height: 15),
+            
+            // Name and Email
+            Text(name.isEmpty ? 'User' : name, 
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            if (user != null)
+              Text(user.email ?? 'Email Not Found', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+            const SizedBox(height: 25),
+
+            // Token Card
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.monetization_on, color: Colors.amber.shade700, size: 30),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Tokens: $tokens', 
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 30),
+            
+            // Transaction History Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/transaction_history');
+                },
+                icon: const Icon(Icons.history),
+                label: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10),
+                  child: Text("View Transaction History", style: TextStyle(fontSize: 16)),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor.withOpacity(0.9),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 2,
+                ),
+              ),
             ),
           ],
         ),

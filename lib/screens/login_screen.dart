@@ -60,7 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
               'uid': user.uid,
               'name': name,
               'email': user.email,
-              'tokens': 20, // default tokens
+              'tokens': 20,
             });
           }
         }
@@ -88,54 +88,100 @@ class _LoginScreenState extends State<LoginScreen> {
     _nameController.dispose();
     super.dispose();
   }
+  
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide.none,
+      ),
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(isLogin ? 'Login' : 'Sign Up')),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!isLogin)
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(30),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                isLogin ? 'Welcome Back!' : 'Join Campus Swap!',
+                style: TextStyle(
+                  fontSize: 28, 
+                  fontWeight: FontWeight.bold, 
+                  color: Theme.of(context).primaryColor),
               ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isLoading ? null : submit,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(isLogin ? 'Login' : 'Sign Up'),
-            ),
-            TextButton(
-              onPressed: toggleForm,
-              child: Text(isLogin
-                  ? "Don't have an account? Sign Up"
-                  : "Already have an account? Login"),
-            ),
-            if (errorMessage.isNotEmpty)
+              const SizedBox(height: 30),
+              
+              if (!isLogin)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 15),
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: _inputDecoration('Full Name'),
+                  ),
+                ),
               Padding(
-                padding: const EdgeInsets.only(top: 20),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.red),
+                padding: const EdgeInsets.only(bottom: 15),
+                child: TextField(
+                  controller: _emailController,
+                  decoration: _inputDecoration('Email'),
+                  keyboardType: TextInputType.emailAddress,
                 ),
               ),
-          ],
+              TextField(
+                controller: _passwordController,
+                decoration: _inputDecoration('Password'),
+                obscureText: true,
+              ),
+              const SizedBox(height: 30),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : submit,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Theme.of(context).primaryColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(isLogin ? 'Login' : 'Sign Up', style: const TextStyle(fontSize: 18)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              
+              TextButton(
+                onPressed: toggleForm,
+                child: Text(isLogin
+                    ? "Don't have an account? Sign Up"
+                    : "Already have an account? Login"),
+              ),
+              
+              if (errorMessage.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 20),
+                  child: Text(
+                    errorMessage,
+                    style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
