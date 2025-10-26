@@ -2,15 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'chat_screen.dart';
 import '../models/item_model.dart';
 
 class ItemDetailsScreen extends StatefulWidget {
   final Item item;
   final String sellerId;
   final String sellerName;
-  final String sellerEmail; // NEW FIELD
+  final String sellerEmail;
 
   const ItemDetailsScreen({
     Key? key,
@@ -34,7 +32,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
-  // --- Flag Item ---
   Future<void> _flagItem() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -69,7 +66,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     }
   }
 
-  // --- Submit Review ---
   Future<void> _submitReview() async {
     final user = _auth.currentUser;
     if (user == null || _reviewController.text.trim().isEmpty || _rating == 0) return;
@@ -150,7 +146,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     );
   }
 
-  // --- Transaction Update ---
   Future<void> _updateTransaction({required bool soldByMe}) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -217,21 +212,6 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
     }
   }
 
-  // --- Open Email ---
-  Future<void> _launchEmail(String email) async {
-    final Uri emailUri = Uri(
-      scheme: 'mailto',
-      path: email,
-      query: 'subject=Inquiry about your item',
-    );
-    if (await canLaunchUrl(emailUri)) {
-      await launchUrl(emailUri);
-    } else {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Cannot open email app")));
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final currentUserId = _auth.currentUser?.uid;
@@ -270,43 +250,14 @@ class _ItemDetailsScreenState extends State<ItemDetailsScreen> {
             const SizedBox(height: 10),
             Text('Description: ${widget.item.description}'),
             const SizedBox(height: 20),
-            // Seller info with tappable email
-            Row(
-              children: [
-                Text('Sold by: ${widget.sellerName}',
-                    style: const TextStyle(fontSize: 16)),
-                const SizedBox(width: 20),
-                GestureDetector(
-                  onTap: () {
-                    if (widget.sellerEmail.isNotEmpty) {
-                      _launchEmail(widget.sellerEmail);
-                    }
-                  },
-                  child: Text('Email: ${widget.sellerEmail}',
-                      style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.blueAccent,
-                          decoration: TextDecoration.underline)),
-                ),
-              ],
-            ),
+            // Seller info, black email
+            Text('Sold by: ${widget.sellerName}', style: const TextStyle(fontSize: 16)),
+            Text('Email: ${widget.sellerEmail}', style: const TextStyle(fontSize: 16)),
             const SizedBox(height: 20),
             // Buttons
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => ChatScreen(
-                                receiverId: widget.sellerId,
-                                receiverName: widget.sellerName)));
-                  },
-                  icon: const Icon(Icons.chat),
-                  label: const Text("Chat"),
-                ),
                 if (!isSeller)
                   ElevatedButton.icon(
                     onPressed: _isFlagging ? null : _flagItem,
