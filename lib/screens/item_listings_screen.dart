@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'add_item_screen.dart';
 import 'item_details_screen.dart';
+import 'profile_screen.dart';
+import 'notifications_screen.dart';
+import 'filter_search_screen.dart';
 import '../models/item_model.dart';
 
 class ItemListingsScreen extends StatefulWidget {
@@ -16,9 +20,43 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Available Items')),
+      appBar: AppBar(
+        title: const Text('Available Items'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => FilterSearchScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => NotificationsScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.collection('items').orderBy('createdAt', descending: true).snapshots(),
+        stream: _firestore
+            .collection('items')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -32,8 +70,10 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
             return const Center(child: Text('No items listed yet!'));
           }
 
-          final allItems = snapshot.data!.docs.map((doc) => Item.fromMap(doc)).toList();
-          final visibleItems = allItems.where((item) => item.flagCount < 10).toList();
+          final allItems =
+              snapshot.data!.docs.map((doc) => Item.fromMap(doc)).toList();
+          final visibleItems =
+              allItems.where((item) => item.flagCount < 10).toList();
 
           if (visibleItems.isEmpty) {
             return const Center(child: Text('No items available!'));
@@ -59,7 +99,10 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
                   String sellerEmail = 'Not available';
 
                   if (item.sellerId.isNotEmpty) {
-                    final sellerDoc = await _firestore.collection('users').doc(item.sellerId).get();
+                    final sellerDoc = await _firestore
+                        .collection('users')
+                        .doc(item.sellerId)
+                        .get();
                     final data = sellerDoc.data();
                     if (data != null) {
                       sellerName = data['name'] as String? ?? 'Unknown';
@@ -83,6 +126,15 @@ class _ItemListingsScreenState extends State<ItemListingsScreen> {
             },
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AddItemScreen()),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
