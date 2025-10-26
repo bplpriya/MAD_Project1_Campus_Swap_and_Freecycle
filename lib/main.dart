@@ -29,7 +29,6 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  // Removed const to prevent errors in older versions
   MyApp({super.key});
 
   @override
@@ -37,7 +36,39 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Campus Swap & Freecycle',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+
+        primarySwatch: Colors.green, 
+        
+        primaryColor: Colors.green.shade700,
+        
+        colorScheme: ColorScheme.fromSwatch(primarySwatch: Colors.green).copyWith(
+          secondary: Colors.orange, 
+        ),
+
+        scaffoldBackgroundColor: Colors.grey.shade50, 
+        appBarTheme: AppBarTheme(
+          color: Colors.green.shade700,
+          foregroundColor: Colors.white,
+          elevation: 1, 
+        ),
+        
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: Colors.green.shade500,
+          foregroundColor: Colors.white,
+        ),
+        textTheme: TextTheme(
+          titleLarge: TextStyle(color: Colors.green.shade700, fontWeight: FontWeight.bold),
+        ),
+        inputDecorationTheme: const InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(10)),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+        ),
+      ),
 
       // Initial screen: Login
       home: LoginScreen(),

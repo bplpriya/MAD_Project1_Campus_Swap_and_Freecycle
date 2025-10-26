@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 class RatingReviewScreen extends StatefulWidget {
-  // Removed const
   RatingReviewScreen({super.key});
 
   @override
@@ -17,11 +16,14 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
     return Scaffold(
       appBar: AppBar(title: Text("Rate & Review")),
       body: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text("How was your experience?", style: TextStyle(fontSize: 18)),
-            SizedBox(height: 20),
+            Text("How was your experience?", 
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
+            const SizedBox(height: 30),
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
@@ -29,6 +31,7 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                   icon: Icon(
                     index < rating ? Icons.star : Icons.star_border,
                     color: Colors.amber,
+                    size: 40,
                   ),
                   onPressed: () {
                     setState(() {
@@ -38,17 +41,31 @@ class _RatingReviewScreenState extends State<RatingReviewScreen> {
                 );
               }),
             ),
+            const SizedBox(height: 30),
+            
             TextField(
               controller: reviewController,
-              decoration: InputDecoration(labelText: "Write a review"),
+              decoration: const InputDecoration(
+                labelText: "Write a review (Optional)",
+                alignLabelWithHint: true,
+              ),
+              maxLines: 4,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 30),
+            
             ElevatedButton(
               onPressed: () {
-                // TODO: Save rating & review to Firestore
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Submitting Review: Rating $rating, Comment: ${reviewController.text}')),
+                );
                 Navigator.pop(context);
               },
-              child: Text("Submit"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text("Submit Review", style: TextStyle(fontSize: 18)),
             ),
           ],
         ),
