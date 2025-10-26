@@ -8,7 +8,7 @@ class NotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: AppBar(title: const Text('Notifications 🔔')),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('notifications')
@@ -26,22 +26,31 @@ class NotificationsScreen extends StatelessWidget {
           final notifications = snapshot.data!.docs;
 
           return ListView.builder(
+            padding: const EdgeInsets.all(8.0),
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               final data = notifications[index].data() as Map<String, dynamic>;
-              final message = data['message'] ?? '';
+              final message = data['message'] ?? 'New Notification';
               final timestamp = data['timestamp'] as Timestamp?;
 
-              String timeString = '';
+              String timeString = 'N/A';
               if (timestamp != null) {
                 final date = timestamp.toDate();
-                timeString = '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+                timeString =
+                    '${date.month}/${date.day}/${date.year} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
               }
 
-              return ListTile(
-                leading: const Icon(Icons.notifications),
-                title: Text(message),
-                subtitle: Text(timeString),
+              return Card(
+                margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                elevation: 1,
+                child: ListTile(
+                  leading: const Icon(Icons.notifications_active, color: Colors.amber),
+                  title: Text(
+                    message, 
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
+                  subtitle: Text(timeString, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                  trailing: const Icon(Icons.arrow_right),
+                ),
               );
             },
           );

@@ -187,14 +187,13 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Define a consistent input decoration style
     const inputDecoration = InputDecoration(
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.all(Radius.circular(10)), // Rounded corners
+        borderRadius: BorderRadius.all(Radius.circular(10)), 
         borderSide: BorderSide.none,
       ),
       filled: true,
-      fillColor: Color(0xFFF5F5F5), // Light gray background
+      fillColor: Colors.white,
       contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 10),
       labelStyle: TextStyle(color: Colors.black54),
       floatingLabelBehavior: FloatingLabelBehavior.auto,
@@ -203,7 +202,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add New Item'),
-        // Default AppBar color based on theme
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -212,7 +210,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // --- 1. Item Details Section ---
+
               Text('Item Details', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
               const SizedBox(height: 15),
               TextFormField(
@@ -246,7 +244,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               const Divider(color: Colors.black12),
               const SizedBox(height: 20),
 
-              // --- 2. Location Section ---
               Text('Location Tagging', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
               const SizedBox(height: 15),
               Row(
@@ -269,7 +266,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       elevation: 0,
-                      // Default background based on primary color
+                      backgroundColor: Theme.of(context).primaryColor,
+                      foregroundColor: Colors.white,
                     ),
                     child: _isLocating
                         ? const SizedBox(
@@ -286,7 +284,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
               const Divider(color: Colors.black12),
               const SizedBox(height: 20),
 
-              // --- 3. Image Upload Section ---
               Text('Item Image', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor)),
               const SizedBox(height: 15),
               Center(
@@ -298,7 +295,7 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       decoration: BoxDecoration(
                         border: Border.all(color: Colors.grey.shade300, width: 2),
                         borderRadius: BorderRadius.circular(10),
-                        color: Colors.grey.shade100, // Light neutral background
+                        color: Colors.white,
                       ),
                       child: _imageFile == null && _webImage == null
                           ? const Center(child: Text('No image selected.', style: TextStyle(color: Colors.grey)))
@@ -317,7 +314,8 @@ class _AddItemScreenState extends State<AddItemScreen> {
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 20),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        // Default background based on primary color
+                        backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
                       ),
                     ),
                   ],
@@ -326,7 +324,6 @@ class _AddItemScreenState extends State<AddItemScreen> {
 
               const SizedBox(height: 40),
               
-              // --- 4. Save Button (Primary Action) ---
               ElevatedButton(
                 onPressed: _isLoading || _isLocating ? null : _saveItem,
                 style: ElevatedButton.styleFrom(
