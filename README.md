@@ -102,3 +102,7 @@ Execute the following command in the project root directory:
 
 ```bash
 flutter run
+
+
+### Presentation link
+https://docs.google.com/presentation/d/1Xudy4t4jyEAh4Zs7khnr8iLS6xwXfssz/edit?usp=sharing&ouid=116419207549339746953&rtpof=true&sd=true
